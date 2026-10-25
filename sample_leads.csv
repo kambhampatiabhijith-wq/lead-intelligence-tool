@@ -1,0 +1,8 @@
+lead_id,contact_name,role,company,company_type,product,annual_volume_tonnes,indicative_price_usd_kg,lead_source,context
+L001,Asha Rao,Head of Procurement,Brightleaf Foods,FMCG,Freeze-dried,150,15.20,Inbound enquiry,"We are launching a private-label freeze-dried range in Q1 and need samples of two blends by next month."
+L002,Marco Diaz,Founder,Bean Street Coffee,Brand owner,Agglomerated,20,9.50,Trade show,"Interested in an instant line for our takeaway counters. Currently on contract with another supplier until December."
+L003,Omar Haddad,Managing Director,Gulf Star Trading,Trader,Spray-dried,60,7.20,Referral,"Looking for a spray-dried supplier for the GCC market and need a quote this month. Lowest price per kg is the deciding factor."
+L004,Neha Kulkarni,Purchase Manager,Coastline Beverages,Manufacturer,Freeze-dried,8,14.50,Inbound enquiry,"Need instant coffee as an ingredient for our ready-to-drink cold coffee line and want to switch suppliers before the new financial year in April."
+L005,Ravi Shetty,Marketing Intern,FreshMart Retail,Retailer,Spray-dried,3,8.40,Cold outreach,"Collecting supplier information for a class project report."
+L006,Lena Fischer,Category Manager,Urban Bites Coffee,Brand owner,Freeze-dried,120,12.00,Trade show,"No budget for new suppliers this year; may revisit next year."
+L007,Erik Nilsson,Director of Sourcing,Nordic Brew Co,FMCG,Agglomerated,40,,Inbound enquiry,"Exploring agglomerated coffee for a new retail jar range."
