@@ -54,7 +54,7 @@ For each lead return:
    - sample_request: the buyer asks for samples
    - competitor_contract: the buyer is currently under contract with, or committed to, another supplier
    - no_budget: the buyer says there is no budget, or buying is on hold this year
-   Each signal needs "quote": words copied exactly from the context (3 to 20 words). Report only what the context states. Never infer. A date that only says when a competitor contract ends is not a timeline. If the context is empty or neutral, return an empty list.
+   Each signal needs "quote": words copied exactly from the context (3 to 20 words). Check every type for every lead. The same words can support more than one type (for example, "launching a new range in Q1" is both stated_need and timeline), so list each type separately. Report only what the context states. Never infer. A date that only says when a competitor contract ends is not a timeline. If the context is empty or neutral, return an empty list.
 2. email: a first outreach email to the contact, with "subject" and "body". The body is 60 to 140 words, addresses the contact by first name, names their company, refers to the product and what they said, and ends with one clear next step (a call or sending samples). Do not quote prices, discounts or delivery dates. Sign off as "Sales team". Plain text, no placeholders in brackets.
 
 Reply with JSON only, in this shape:
