@@ -1,42 +1,25 @@
 """Lead Intelligence Tool - web app entry point.
 
-Stage 2: input form and CSV upload. Leads are held in memory for now;
-the database arrives in a later stage.
+Stage 3: backend API. The page sends leads to POST /api/score as JSON;
+the API validates them and returns a structured result.
+Leads and the last result are held in memory until the database stage.
 """
 
 import csv
 import io
 import os
 
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+
+from validation import COMPANY_TYPES, FIELDS, LEAD_SOURCES, PRODUCTS, clean_row, validate_batch
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-only-secret")
 
-COMPANY_TYPES = ["FMCG", "Brand owner", "Manufacturer", "Retailer", "Trader"]
-PRODUCTS = ["Spray-dried", "Agglomerated", "Freeze-dried"]
-LEAD_SOURCES = ["Inbound enquiry", "Referral", "Trade show", "Cold outreach"]
-
-FIELDS = [
-    "lead_id",
-    "contact_name",
-    "role",
-    "company",
-    "company_type",
-    "product",
-    "annual_volume_tonnes",
-    "indicative_price_usd_kg",
-    "lead_source",
-    "context",
-]
-
 # Leads waiting to be scored. Moves to SQLite in the database stage.
 LEADS = []
-
-
-def clean_row(raw):
-    """Keep only the expected fields and strip stray spaces."""
-    return {field: (raw.get(field) or "").strip() for field in FIELDS}
+# Result of the last scoring run. Moves to SQLite in the database stage.
+LAST_RUN = None
 
 
 def next_lead_id():
@@ -101,6 +84,39 @@ def clear_leads():
     LEADS.clear()
     flash("Cleared all leads.", "ok")
     return redirect(url_for("index"))
+
+
+# ---------- Backend API ----------
+
+@app.post("/api/score")
+def api_score():
+    """Validate a batch of leads sent as JSON: {"leads": [ {...}, ... ]}."""
+    global LAST_RUN
+    body = request.get_json(silent=True)
+    if not isinstance(body, dict) or not isinstance(body.get("leads"), list):
+        return jsonify({"error": 'Send JSON like {"leads": [ ... ]}.'}), 400
+    if not body["leads"]:
+        return jsonify({"error": "No leads to score. Add or upload leads first."}), 400
+
+    valid, rejected = validate_batch(body["leads"])
+    LAST_RUN = {
+        "received": len(body["leads"]),
+        "valid": valid,
+        "rejected": rejected,
+    }
+    return jsonify({
+        "received": LAST_RUN["received"],
+        "valid_count": len(valid),
+        "rejected_count": len(rejected),
+        "valid": valid,
+        "rejected": rejected,
+        "results_url": url_for("results"),
+    })
+
+
+@app.route("/results")
+def results():
+    return render_template("results.html", run=LAST_RUN)
 
 
 if __name__ == "__main__":

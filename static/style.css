@@ -108,3 +108,28 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: 
   .form-grid { grid-template-columns: 1fr; }
   .span-2 { grid-column: span 1; }
 }
+
+/* ---------- Stage 3: API results ---------- */
+.score-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 4px 0 16px; padding: 14px; background: var(--accent-soft); border-radius: 8px; }
+.btn:disabled { opacity: 0.6; cursor: wait; }
+.status-error { color: var(--error); font-weight: 600; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+.stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.stat-num { display: block; font-size: 28px; font-weight: 700; line-height: 1.1; }
+.stat-label { color: var(--muted); font-size: 13px; }
+.stat-ok .stat-num { color: var(--ok); }
+.stat-bad .stat-num { color: var(--error); }
+
+.lead-row { padding: 12px 0; border-top: 1px solid var(--line); }
+.lead-row .muted { display: block; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.facts span { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 13px; }
+
+.count-error { background: var(--error-soft); color: var(--error); }
+.reject-item { padding: 10px 0; border-top: 1px solid var(--line); }
+.reject-item ul { margin: 6px 0 0; color: var(--error); font-size: 14px; }
+
+@media (max-width: 800px) {
+  .stats { grid-template-columns: 1fr; }
+}

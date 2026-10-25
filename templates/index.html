@@ -74,6 +74,11 @@
   </div>
 
   {% if leads %}
+  <div class="score-bar">
+    <button type="button" class="btn" id="score-btn">Score leads</button>
+    <span class="muted" id="score-status">Sends these leads to the backend API for checking and scoring.</span>
+  </div>
+
   <div class="table-scroll">
     <table>
       <thead>
@@ -108,4 +113,33 @@
   <p class="empty">No leads yet. Upload sample_leads.csv or add one with the form.</p>
   {% endif %}
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const LEADS = {{ leads|tojson }};
+  const btn = document.getElementById("score-btn");
+  const statusEl = document.getElementById("score-status");
+
+  if (btn) {
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      statusEl.textContent = "Scoring " + LEADS.length + " leads...";
+      try {
+        const res = await fetch("{{ url_for('api_score') }}", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leads: LEADS }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "The server returned an error.");
+        window.location.href = data.results_url;
+      } catch (err) {
+        statusEl.textContent = "Could not score leads: " + err.message;
+        statusEl.classList.add("status-error");
+        btn.disabled = false;
+      }
+    });
+  }
+</script>
 {% endblock %}

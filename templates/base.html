@@ -12,6 +12,7 @@
       <a class="brand" href="{{ url_for('index') }}">Lead Intelligence Tool</a>
       <nav>
         <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Leads</a>
+        <a href="{{ url_for('results') }}" class="{% if request.endpoint == 'results' %}active{% endif %}">Results</a>
       </nav>
     </div>
   </header>
