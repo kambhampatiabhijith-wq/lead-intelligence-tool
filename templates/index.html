@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="intro">
+  <h1>New leads</h1>
+  <p>Add instant coffee leads one at a time or upload a list. Each lead gets a score, a segment, an outreach email and a next action.</p>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>Upload a CSV</h2>
+    <p class="muted">Columns needed: lead_id, contact_name, role, company, company_type, product, annual_volume_tonnes, indicative_price_usd_kg, lead_source, context. Uploading replaces the current list.</p>
+    <form action="{{ url_for('upload_csv') }}" method="post" enctype="multipart/form-data" class="stack">
+      <input type="file" name="file" accept=".csv">
+      <button type="submit" class="btn">Upload leads</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>Add a lead</h2>
+    <form action="{{ url_for('add_lead') }}" method="post" class="form-grid">
+      <label>Contact name
+        <input name="contact_name" placeholder="Asha Rao" required>
+      </label>
+      <label>Role
+        <input name="role" placeholder="Head of Procurement" required>
+      </label>
+      <label>Company
+        <input name="company" placeholder="Brightleaf Foods" required>
+      </label>
+      <label>Company type
+        <select name="company_type" required>
+          <option value="" disabled selected>Choose a type</option>
+          {% for t in company_types %}<option>{{ t }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Product
+        <select name="product" required>
+          <option value="" disabled selected>Choose a product</option>
+          {% for p in products %}<option>{{ p }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Lead source
+        <select name="lead_source" required>
+          <option value="" disabled selected>Choose a source</option>
+          {% for s in lead_sources %}<option>{{ s }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Annual volume (tonnes)
+        <input name="annual_volume_tonnes" type="number" min="0" step="0.1" placeholder="60" required>
+      </label>
+      <label>Indicative price (USD/kg)
+        <input name="indicative_price_usd_kg" type="number" min="0" step="0.01" placeholder="9.50" required>
+      </label>
+      <label class="span-2">Context
+        <textarea name="context" rows="3" placeholder="What the buyer said: need, timeline, samples, current supplier, budget"></textarea>
+      </label>
+      <input type="hidden" name="lead_id" value="{{ next_id }}">
+      <div class="span-2">
+        <button type="submit" class="btn">Add lead {{ next_id }}</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <h2>Leads to score <span class="count">{{ leads|length }}</span></h2>
+    {% if leads %}
+    <form action="{{ url_for('clear_leads') }}" method="post">
+      <button type="submit" class="btn btn-ghost">Clear all</button>
+    </form>
+    {% endif %}
+  </div>
+
+  {% if leads %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Lead</th>
+          <th>Contact</th>
+          <th>Type</th>
+          <th>Product</th>
+          <th class="num">Volume (t)</th>
+          <th class="num">Price ($/kg)</th>
+          <th>Source</th>
+          <th>Context</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lead in leads %}
+        <tr>
+          <td><strong>{{ lead.lead_id }}</strong><br><span class="muted">{{ lead.company }}</span></td>
+          <td>{{ lead.contact_name }}<br><span class="muted">{{ lead.role }}</span></td>
+          <td>{{ lead.company_type }}</td>
+          <td>{{ lead.product }}</td>
+          <td class="num">{{ lead.annual_volume_tonnes }}</td>
+          <td class="num">{{ lead.indicative_price_usd_kg or "—" }}</td>
+          <td>{{ lead.lead_source }}</td>
+          <td class="notes" title="{{ lead.context }}">{{ lead.context }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No leads yet. Upload sample_leads.csv or add one with the form.</p>
+  {% endif %}
+</section>
+{% endblock %}
