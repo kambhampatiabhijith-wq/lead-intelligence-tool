@@ -1,7 +1,7 @@
 """Lead Intelligence Tool - web app entry point.
 
-Stage 3: backend API. The page sends leads to POST /api/score as JSON;
-the API validates them and returns a structured result.
+Stage 4: AI generation. POST /api/score validates the leads, then the AI
+reads each lead's context for buying signals and drafts an outreach email.
 Leads and the last result are held in memory until the database stage.
 """
 
@@ -11,6 +11,7 @@ import os
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
+import ai
 from validation import COMPANY_TYPES, FIELDS, LEAD_SOURCES, PRODUCTS, clean_row, validate_batch
 
 app = Flask(__name__)
@@ -99,16 +100,20 @@ def api_score():
         return jsonify({"error": "No leads to score. Add or upload leads first."}), 400
 
     valid, rejected = validate_batch(body["leads"])
+    ai_results, ai_status = ai.generate(valid)
     LAST_RUN = {
         "received": len(body["leads"]),
         "valid": valid,
         "rejected": rejected,
+        "ai": ai_results,
+        "ai_status": ai_status,
     }
     return jsonify({
         "received": LAST_RUN["received"],
         "valid_count": len(valid),
         "rejected_count": len(rejected),
-        "valid": valid,
+        "ai_status": ai_status,
+        "leads": [dict(lead, ai=ai_results[lead["lead_id"]]) for lead in valid],
         "rejected": rejected,
         "results_url": url_for("results"),
     })

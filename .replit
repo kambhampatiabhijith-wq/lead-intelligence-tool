@@ -11,3 +11,7 @@ deploymentTarget = "autoscale"
 [[ports]]
 localPort = 8000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]

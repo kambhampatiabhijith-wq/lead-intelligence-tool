@@ -133,3 +133,20 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: 
 @media (max-width: 800px) {
   .stats { grid-template-columns: 1fr; }
 }
+
+/* ---------- Stage 4: AI signals and email ---------- */
+.flash-warn { background: #fef4e6; color: #b54708; }
+.lead-title { margin: 0; font-size: 17px; }
+.card h3 { font-size: 14px; margin: 16px 0 6px; }
+.signals { list-style: none; padding: 0; margin: 0; }
+.signals li { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+.signals li:last-child { border-bottom: none; }
+.src { display: inline-block; min-width: 40px; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; height: fit-content; }
+.src-ai { background: #f3ecfb; color: #6b3fa0; }
+q { font-style: italic; }
+.dropped { margin-top: 10px; font-size: 13px; color: var(--muted); }
+.dropped summary { cursor: pointer; }
+.dropped ul { margin: 6px 0 0; }
+.email { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 12px 14px; font-size: 14px; }
+.email-subject { font-weight: 700; margin-bottom: 8px; }
+.email-body { white-space: pre-wrap; }
