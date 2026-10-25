@@ -1,7 +1,8 @@
 """Lead Intelligence Tool - web app entry point.
 
-Stage 4: AI generation. POST /api/score validates the leads, then the AI
-reads each lead's context for buying signals and drafts an outreach email.
+Stage 5: logic layer. POST /api/score validates the leads, the AI reads the
+context for quoted signals and drafts an email, then the logic layer scores,
+segments, picks the next action and checks the email.
 Leads and the last result are held in memory until the database stage.
 """
 
@@ -12,6 +13,7 @@ import os
 from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 
 import ai
+import logic
 from validation import COMPANY_TYPES, FIELDS, LEAD_SOURCES, PRODUCTS, clean_row, validate_batch
 
 app = Flask(__name__)
@@ -101,11 +103,12 @@ def api_score():
 
     valid, rejected = validate_batch(body["leads"])
     ai_results, ai_status = ai.generate(valid)
+    scored = logic.score_batch(valid, ai_results)
     LAST_RUN = {
         "received": len(body["leads"]),
         "valid": valid,
         "rejected": rejected,
-        "ai": ai_results,
+        "results": scored,
         "ai_status": ai_status,
     }
     return jsonify({
@@ -113,7 +116,14 @@ def api_score():
         "valid_count": len(valid),
         "rejected_count": len(rejected),
         "ai_status": ai_status,
-        "leads": [dict(lead, ai=ai_results[lead["lead_id"]]) for lead in valid],
+        "results": [{
+            "lead_id": r["lead"]["lead_id"],
+            "company": r["lead"]["company"],
+            "score": r["score"],
+            "segment": r["segment"],
+            "next_action": r["next_action"],
+            "email_source": r["email_source"],
+        } for r in scored],
         "rejected": rejected,
         "results_url": url_for("results"),
     })
