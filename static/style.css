@@ -150,3 +150,47 @@ q { font-style: italic; }
 .email { border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 12px 14px; font-size: 14px; }
 .email-subject { font-weight: 700; margin-bottom: 8px; }
 .email-body { white-space: pre-wrap; }
+
+/* ---------- Stage 5: scores and segments ---------- */
+:root {
+  --hot: #b42318; --hot-soft: #fdecea;
+  --warm: #b54708; --warm-soft: #fef4e6;
+  --nurture: #1f5fae; --nurture-soft: #e8f0fa;
+  --low: #667085; --low-soft: #f0f1f3;
+}
+.stats-5 { grid-template-columns: repeat(5, 1fr); }
+.seg-hot .stat-num { color: var(--hot); }
+.seg-warm .stat-num { color: var(--warm); }
+.seg-nurture .stat-num { color: var(--nurture); }
+.seg-low .stat-num { color: var(--low); }
+
+.result { border-left: 5px solid var(--line); }
+.result-hot { border-left-color: var(--hot); }
+.result-warm { border-left-color: var(--warm); }
+.result-nurture { border-left-color: var(--nurture); }
+.result-low { border-left-color: var(--low); }
+.result-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.result-badges { text-align: right; white-space: nowrap; }
+.badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 13px; font-weight: 700; }
+.badge-hot { background: var(--hot-soft); color: var(--hot); }
+.badge-warm { background: var(--warm-soft); color: var(--warm); }
+.badge-nurture { background: var(--nurture-soft); color: var(--nurture); }
+.badge-low { background: var(--low-soft); color: var(--low); }
+.score { display: block; margin-top: 4px; font-size: 20px; font-weight: 700; }
+
+.next-action { margin-top: 12px; padding: 10px 12px; background: var(--accent-soft); border-radius: 8px; font-size: 14px; }
+.next-action .muted { display: block; margin-top: 2px; }
+
+.breakdown td { padding: 7px 8px; font-size: 14px; }
+.bd-part { font-weight: 600; white-space: nowrap; }
+.bd-detail { color: var(--muted); }
+.bd-total td { font-weight: 700; border-bottom: none; }
+.pts-minus { color: var(--hot); }
+.src-rule { background: var(--accent-soft); color: var(--accent); }
+.card h3 .src { margin-left: 6px; vertical-align: middle; }
+
+@media (max-width: 800px) {
+  .stats-5 { grid-template-columns: repeat(2, 1fr); }
+  .result-head { flex-direction: column; }
+  .result-badges { text-align: left; }
+}
