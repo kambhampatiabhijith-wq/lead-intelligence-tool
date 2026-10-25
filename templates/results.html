@@ -4,8 +4,8 @@
 
 {% block content %}
 <section class="intro">
-  <h1>Scoring results</h1>
-  <p>Leads ranked by segment and score. Every point is explained, and the next action comes from fixed rules.</p>
+  <h1>Scoring results{% if run %} <span class="run-tag">Run #{{ run.id }}</span>{% endif %}</h1>
+  <p>{% if run %}Saved {{ run.created_at }}. {% endif %}Leads ranked by segment and score. Every point is explained, and the next action comes from fixed rules.</p>
 </section>
 
 {% if not run %}
@@ -27,7 +27,7 @@
 
 {% for r in run.results %}
 {% set lead = r.lead %}
-<section class="card result result-{{ r.segment|lower }}">
+<section class="card result result-{{ r.segment|lower }}" id="result-{{ r.id }}">
   <div class="result-head">
     <div>
       <h2 class="lead-title">{{ lead.lead_id }} · {{ lead.company }}</h2>
@@ -82,6 +82,14 @@
     <div class="email-subject">Subject: {{ r.email.subject }}</div>
     <div class="email-body">{{ r.email.body }}</div>
   </div>
+
+  <form class="outcome-form" method="post" action="{{ url_for('record_outcome', result_id=r.id) }}">
+    <span class="outcome-label">What happened?</span>
+    {% for o in outcomes %}
+    <button type="submit" name="outcome" value="{{ o }}" class="chip {{ 'chip-on' if r.outcome == o }}">{{ o }}</button>
+    {% endfor %}
+    {% if r.outcome %}<button type="submit" name="outcome" value="clear" class="link-btn">Clear</button>{% endif %}
+  </form>
 </section>
 {% else %}
 <section class="card"><p class="empty">No leads passed the checks.</p></section>

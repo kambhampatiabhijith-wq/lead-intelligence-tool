@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}History · Lead Intelligence Tool{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>History</h1>
+  <p>Every scoring run is saved in the database. Open one to see its leads, scores and emails, or to record what happened.</p>
+</section>
+
+<section class="card">
+  {% if runs %}
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Run</th>
+          <th>Saved</th>
+          <th class="num">Leads</th>
+          <th class="num">Hot</th>
+          <th class="num">Warm</th>
+          <th class="num">Nurture</th>
+          <th class="num">Low</th>
+          <th class="num">Rejected</th>
+          <th class="num">Avg score</th>
+          <th>AI</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in runs %}
+        <tr>
+          <td><a href="{{ url_for('view_run', run_id=r.id) }}"><strong>#{{ r.id }}</strong></a></td>
+          <td>{{ r.created_at }}</td>
+          <td class="num">{{ r.received }}</td>
+          <td class="num seg-text-hot">{{ r.hot }}</td>
+          <td class="num seg-text-warm">{{ r.warm }}</td>
+          <td class="num seg-text-nurture">{{ r.nurture }}</td>
+          <td class="num seg-text-low">{{ r.low }}</td>
+          <td class="num">{{ r.rejected_count }}</td>
+          <td class="num">{{ '%d'|format(r.avg_score) if r.avg_score is not none else '-' }}</td>
+          <td>{% if r.ai_used %}<span class="src src-ai">AI</span>{% else %}<span class="muted" title="{{ r.ai_message }}">Rules only</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No runs yet. Score some leads and they will appear here.</p>
+  {% endif %}
+</section>
+{% endblock %}

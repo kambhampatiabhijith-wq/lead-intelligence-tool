@@ -104,6 +104,7 @@ def check_email(email, lead):
 def template_email(lead, segment):
     first = lead["contact_name"].split()[0]
     product = lead["product"].lower()
+    kind = lead["company_type"] if lead["company_type"].isupper() else lead["company_type"].lower()
     if segment == "Hot":
         ask = f"Could we set up a short call this week? I can also send samples of our {product} coffee with a spec sheet."
     elif segment == "Warm":
@@ -114,7 +115,7 @@ def template_email(lead, segment):
         f"Hi {first},\n\n"
         f"Thank you for your interest in {product} instant coffee for {lead['company']}. "
         f"We manufacture spray-dried, agglomerated and freeze-dried coffee in bulk and as private label, "
-        f"and work with {lead['company_type'].lower()} customers on blends, packing formats and consistent supply.\n\n"
+        f"and work with {kind} customers on blends, packing formats and consistent supply.\n\n"
         f"{ask}\n\n"
         f"Best regards,\nSales team"
     )

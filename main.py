@@ -1,45 +1,48 @@
 """Lead Intelligence Tool - web app entry point.
 
-Stage 5: logic layer. POST /api/score validates the leads, the AI reads the
-context for quoted signals and drafts an email, then the logic layer scores,
-segments, picks the next action and checks the email.
-Leads and the last result are held in memory until the database stage.
+Flow for each scoring run (POST /api/score):
+  validation.py  -> rejects bad rows with a plain-English reason
+  ai.py          -> quoted buying signals + outreach email draft (Groq)
+  logic.py       -> score, segment, next action, email checks
+  db.py          -> run, results and rejected rows saved in SQLite
+The pages read everything back from the database.
 """
 
 import csv
 import io
 import os
 
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
 
 import ai
+import db
 import logic
 from validation import COMPANY_TYPES, FIELDS, LEAD_SOURCES, PRODUCTS, clean_row, validate_batch
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-only-secret")
 
-# Leads waiting to be scored. Moves to SQLite in the database stage.
-LEADS = []
-# Result of the last scoring run. Moves to SQLite in the database stage.
-LAST_RUN = None
+db.init_db()
 
 
-def next_lead_id():
+def next_lead_id(leads):
     """Next free ID in the L001 pattern."""
-    numbers = [int(l["lead_id"][1:]) for l in LEADS if l["lead_id"][1:].isdigit()]
+    numbers = [int(l["lead_id"][1:]) for l in leads if l["lead_id"][1:].isdigit()]
     return f"L{(max(numbers, default=0) + 1):03d}"
 
 
+# ---------- Leads waiting to be scored ----------
+
 @app.route("/")
 def index():
+    leads = db.get_pending()
     return render_template(
         "index.html",
-        leads=LEADS,
+        leads=leads,
         company_types=COMPANY_TYPES,
         products=PRODUCTS,
         lead_sources=LEAD_SOURCES,
-        next_id=next_lead_id(),
+        next_id=next_lead_id(leads),
     )
 
 
@@ -47,8 +50,8 @@ def index():
 def add_lead():
     lead = clean_row(request.form)
     if not lead["lead_id"]:
-        lead["lead_id"] = next_lead_id()
-    LEADS.append(lead)
+        lead["lead_id"] = next_lead_id(db.get_pending())
+    db.add_pending(lead)
     flash(f"Added lead {lead['lead_id']} ({lead['company'] or 'no company'}).", "ok")
     return redirect(url_for("index"))
 
@@ -76,15 +79,14 @@ def upload_csv():
         return redirect(url_for("index"))
 
     rows = [clean_row(r) for r in reader if any((v or "").strip() for v in r.values())]
-    LEADS.clear()
-    LEADS.extend(rows)
+    db.replace_pending(rows)
     flash(f"Loaded {len(rows)} leads from {file.filename}.", "ok")
     return redirect(url_for("index"))
 
 
 @app.post("/clear")
 def clear_leads():
-    LEADS.clear()
+    db.clear_pending()
     flash("Cleared all leads.", "ok")
     return redirect(url_for("index"))
 
@@ -93,8 +95,7 @@ def clear_leads():
 
 @app.post("/api/score")
 def api_score():
-    """Validate a batch of leads sent as JSON: {"leads": [ {...}, ... ]}."""
-    global LAST_RUN
+    """Score a batch of leads sent as JSON: {"leads": [ {...}, ... ]}."""
     body = request.get_json(silent=True)
     if not isinstance(body, dict) or not isinstance(body.get("leads"), list):
         return jsonify({"error": 'Send JSON like {"leads": [ ... ]}.'}), 400
@@ -104,15 +105,11 @@ def api_score():
     valid, rejected = validate_batch(body["leads"])
     ai_results, ai_status = ai.generate(valid)
     scored = logic.score_batch(valid, ai_results)
-    LAST_RUN = {
-        "received": len(body["leads"]),
-        "valid": valid,
-        "rejected": rejected,
-        "results": scored,
-        "ai_status": ai_status,
-    }
+    run_id = db.save_run(len(body["leads"]), scored, rejected, ai_status)
+
     return jsonify({
-        "received": LAST_RUN["received"],
+        "run_id": run_id,
+        "received": len(body["leads"]),
         "valid_count": len(valid),
         "rejected_count": len(rejected),
         "ai_status": ai_status,
@@ -125,13 +122,55 @@ def api_score():
             "email_source": r["email_source"],
         } for r in scored],
         "rejected": rejected,
-        "results_url": url_for("results"),
+        "results_url": url_for("view_run", run_id=run_id),
     })
 
 
+@app.get("/api/runs/<int:run_id>")
+def api_run(run_id):
+    """Read a saved run back from the database as JSON."""
+    run = db.load_run(run_id)
+    if run is None:
+        return jsonify({"error": f"Run {run_id} not found."}), 404
+    return jsonify(run)
+
+
+# ---------- Results and history pages ----------
+
 @app.route("/results")
 def results():
-    return render_template("results.html", run=LAST_RUN)
+    run_id = db.latest_run_id()
+    if run_id is None:
+        return render_template("results.html", run=None, outcomes=db.OUTCOMES)
+    return redirect(url_for("view_run", run_id=run_id))
+
+
+@app.route("/runs/<int:run_id>")
+def view_run(run_id):
+    run = db.load_run(run_id)
+    if run is None:
+        abort(404)
+    return render_template("results.html", run=run, outcomes=db.OUTCOMES)
+
+
+@app.route("/history")
+def history():
+    return render_template("history.html", runs=db.list_runs())
+
+
+@app.post("/results/<int:result_id>/outcome")
+def record_outcome(result_id):
+    run_id = db.run_id_for_result(result_id)
+    if run_id is None:
+        abort(404)
+    outcome = request.form.get("outcome", "")
+    if outcome == "clear":
+        db.clear_outcome(result_id)
+    elif outcome in db.OUTCOMES:
+        db.set_outcome(result_id, outcome)
+    else:
+        flash("Pick one of the outcome buttons.", "error")
+    return redirect(url_for("view_run", run_id=run_id) + f"#result-{result_id}")
 
 
 if __name__ == "__main__":

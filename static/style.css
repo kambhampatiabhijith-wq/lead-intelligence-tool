@@ -194,3 +194,16 @@ q { font-style: italic; }
   .result-head { flex-direction: column; }
   .result-badges { text-align: left; }
 }
+
+/* ---------- Stage 6: saved runs, outcomes, history ---------- */
+.run-tag { display: inline-block; margin-left: 8px; padding: 2px 10px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 14px; vertical-align: middle; }
+.outcome-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--line); }
+.outcome-label { font-size: 13px; font-weight: 600; margin-right: 4px; }
+.chip { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 14px; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; }
+.chip:hover { border-color: var(--accent); }
+.chip-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.link-btn { font: inherit; font-size: 13px; background: none; border: none; color: var(--accent); cursor: pointer; text-decoration: underline; padding: 0 4px; }
+.seg-text-hot { color: var(--hot); font-weight: 700; }
+.seg-text-warm { color: var(--warm); font-weight: 700; }
+.seg-text-nurture { color: var(--nurture); font-weight: 700; }
+.seg-text-low { color: var(--low); font-weight: 700; }
