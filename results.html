@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Results · Lead Intelligence Tool{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>Scoring results</h1>
+  <p>Leads ranked by segment and score. Every point is explained, and the next action comes from fixed rules.</p>
+</section>
+
+{% if not run %}
+<section class="card">
+  <p class="empty">No leads scored yet. Go to <a href="{{ url_for('index') }}">Leads</a>, add or upload leads, then click Score leads.</p>
+</section>
+{% else %}
+<div class="flash {{ 'flash-ok' if run.ai_status.used else 'flash-warn' }}">{{ run.ai_status.message }}{% if not run.ai_status.used %} Scores use the rules only, and emails use the template.{% endif %}</div>
+
+{% set seg = {} %}
+{% for r in run.results %}{% set _ = seg.update({r.segment: seg.get(r.segment, 0) + 1}) %}{% endfor %}
+<div class="stats stats-5">
+  <div class="stat"><span class="stat-num">{{ run.received }}</span><span class="stat-label">Leads received</span></div>
+  <div class="stat seg-hot"><span class="stat-num">{{ seg.get('Hot', 0) }}</span><span class="stat-label">Hot (70+)</span></div>
+  <div class="stat seg-warm"><span class="stat-num">{{ seg.get('Warm', 0) }}</span><span class="stat-label">Warm (45-69)</span></div>
+  <div class="stat seg-nurture"><span class="stat-num">{{ seg.get('Nurture', 0) }}</span><span class="stat-label">Nurture (25-44)</span></div>
+  <div class="stat seg-low"><span class="stat-num">{{ seg.get('Low', 0) }}</span><span class="stat-label">Low (under 25)</span></div>
+</div>
+
+{% for r in run.results %}
+{% set lead = r.lead %}
+<section class="card result result-{{ r.segment|lower }}">
+  <div class="result-head">
+    <div>
+      <h2 class="lead-title">{{ lead.lead_id }} · {{ lead.company }}</h2>
+      <span class="muted">{{ lead.contact_name }}, {{ lead.role }}</span>
+    </div>
+    <div class="result-badges">
+      <span class="badge badge-{{ r.segment|lower }}">{{ r.segment }}</span>
+      <span class="score">{{ r.score }} / 100</span>
+    </div>
+  </div>
+
+  <div class="facts">
+    <span>{{ lead.company_type }}</span>
+    <span>{{ lead.product }}</span>
+    <span>{{ '%g'|format(lead.annual_volume_tonnes) }} t/year</span>
+    <span>${{ '%.2f'|format(lead.indicative_price_usd_kg) }}/kg</span>
+    <span>{{ lead.lead_source }}</span>
+  </div>
+
+  <div class="next-action">
+    <strong>Next action:</strong> {{ r.next_action }}
+    {% if r.action_reasons %}<span class="muted">Why: {{ r.action_reasons|join('; ') }}.</span>{% endif %}
+  </div>
+
+  <h3>How the score adds up</h3>
+  <table class="breakdown">
+    <tbody>
+      {% for p in r.parts %}
+      <tr>
+        <td class="bd-part">{{ p.part }}</td>
+        <td><span class="src src-{{ p.source|lower }}">{{ p.source }}</span></td>
+        <td class="bd-detail">{{ p.detail }}</td>
+        <td class="num {{ 'pts-minus' if p.points < 0 }}">{{ '%+d'|format(p.points) }}</td>
+      </tr>
+      {% endfor %}
+      <tr class="bd-total"><td colspan="3">Score (kept between 0 and 100)</td><td class="num">{{ r.score }}</td></tr>
+    </tbody>
+  </table>
+
+  {% if r.ai_dropped %}
+  <details class="dropped">
+    <summary>{{ r.ai_dropped|length }} AI claim(s) dropped</summary>
+    <ul>{% for d in r.ai_dropped %}<li>{{ d }}</li>{% endfor %}</ul>
+  </details>
+  {% endif %}
+
+  <h3>Outreach email <span class="src src-{{ 'ai' if r.email_source == 'AI draft' else 'rule' }}">{{ r.email_source }}</span></h3>
+  {% if r.email_problems %}
+  <p class="muted">The AI draft failed the checks ({{ r.email_problems|join('; ') }}), so the template is shown.</p>
+  {% endif %}
+  <div class="email">
+    <div class="email-subject">Subject: {{ r.email.subject }}</div>
+    <div class="email-body">{{ r.email.body }}</div>
+  </div>
+</section>
+{% else %}
+<section class="card"><p class="empty">No leads passed the checks.</p></section>
+{% endfor %}
+
+{% if run.rejected %}
+<section class="card">
+  <h2>Rejected <span class="count count-error">{{ run.rejected|length }}</span></h2>
+  <p class="muted">Fix these and upload again.</p>
+  {% for item in run.rejected %}
+  <div class="reject-item">
+    <strong>{{ item.lead.lead_id or "(no ID)" }} · {{ item.lead.company or "(no company)" }}</strong>
+    <ul>
+      {% for e in item.errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
