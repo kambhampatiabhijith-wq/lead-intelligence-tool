@@ -218,3 +218,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Replit and app files
+.agents/
+.cache/
+.local/
+.pythonlibs/
+*.db
+.env
