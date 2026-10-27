@@ -226,3 +226,8 @@ __marimo__/
 .pythonlibs/
 *.db
 .env
+
+# Files Replit generates on its own (not used by this app)
+pyproject.toml
+uv.lock
+src/
