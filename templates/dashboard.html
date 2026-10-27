@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · Lead Intelligence Tool{% endblock %}
+
+{% block content %}
+<section class="intro">
+  <h1>Admin dashboard</h1>
+  <p>How the tool is being used, whether the AI is healthy, and whether the scoring predicts real outcomes.</p>
+</section>
+
+{% if stats.runs == 0 %}
+<section class="card">
+  <p class="empty">No runs yet. Score some leads on the <a href="{{ url_for('index') }}">Leads</a> page and the dashboard will fill in.</p>
+</section>
+{% else %}
+
+<div class="kpis">
+  <div class="kpi"><span class="kpi-label">Scoring runs</span><span class="kpi-num">{{ stats.runs }}</span><span class="kpi-note">{{ stats.rejected }} rows rejected by validation</span></div>
+  <div class="kpi"><span class="kpi-label">Leads scored</span><span class="kpi-num">{{ stats.leads_scored }}</span><span class="kpi-note">Average score {{ stats.avg_score }}</span></div>
+  <div class="kpi"><span class="kpi-label">Runs with AI</span><span class="kpi-num">{{ stats.ai_rate }}%</span><span class="kpi-note">{{ stats.ai_runs }} of {{ stats.runs }} runs</span></div>
+  <div class="kpi"><span class="kpi-label">Outcomes recorded</span><span class="kpi-num">{{ stats.outcomes_recorded }}</span><span class="kpi-note">of {{ stats.leads_scored }} scored leads</span></div>
+</div>
+
+<section class="card">
+  <h2>Do Hot leads convert better than Warm leads?</h2>
+  <p class="verdict">{{ stats.verdict }}</p>
+  <div class="table-scroll">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Segment</th>
+          <th class="num">Leads</th>
+          {% for o in outcomes %}<th class="num">{{ o }}</th>{% endfor %}
+          <th class="num">Meeting or won</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stats.segments %}
+        <tr>
+          <td><span class="badge badge-{{ s.segment|lower }}">{{ s.segment }}</span></td>
+          <td class="num">{{ s.leads }}</td>
+          {% for o in outcomes %}<td class="num">{{ s.counts[o] or "–" }}</td>{% endfor %}
+          <td class="num"><strong>{{ (s.rate|string + "%") if s.rate is not none else "–" }}</strong>{% if s.recorded %} <span class="muted">({{ s.positive }} of {{ s.recorded }})</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">Counts only leads with an outcome recorded on the Results page. If Warm ever beats Hot, the scoring weights need a review.</p>
+</section>
+
+<div class="dash-grid">
+  <section class="card">
+    <h2>Segment mix by run</h2>
+    <p class="muted">Last {{ stats.chart_runs.labels|length }} runs. A run full of Low leads points to poor lead sources.</p>
+    <div class="chart-box"><canvas id="mixChart" aria-label="Stacked bar chart of Hot, Warm, Nurture and Low leads per run" role="img"></canvas></div>
+  </section>
+
+  <section class="card">
+    <h2>Next actions handed to reps</h2>
+    <p class="muted">Across all scored leads. Escalations need a manager's time.</p>
+    <div class="chart-box"><canvas id="actionChart" aria-label="Bar chart of next actions" role="img"></canvas></div>
+  </section>
+</div>
+
+<div class="dash-grid">
+  <section class="card">
+    <h2>Follow-ups waiting <span class="count">{{ stats.follow_ups|length }}</span></h2>
+    <p class="muted">Hot and Warm leads from the latest run (#{{ stats.latest_run }}) with no outcome recorded yet.</p>
+    {% if stats.follow_ups %}
+    <ul class="plain-list">
+      {% for f in stats.follow_ups %}
+      <li>
+        <span class="badge badge-{{ f.segment|lower }}">{{ f.segment }}</span>
+        <a href="{{ url_for('view_run', run_id=f.run_id) }}#result-{{ f.id }}"><strong>{{ f.lead_id }} · {{ f.company }}</strong></a>
+        <span class="muted">{{ f.score }}/100 · {{ f.next_action }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">Nothing waiting. Every Hot and Warm lead in the latest run has an outcome.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>AI health</h2>
+    <div class="health">
+      <div><span class="kpi-num-sm">{{ stats.ai_rate }}%</span><span class="muted">runs where the AI read the leads</span></div>
+      <div><span class="kpi-num-sm">{{ stats.dropped_claims }}</span><span class="muted">AI claims dropped (quote not in the context)</span></div>
+      <div><span class="kpi-num-sm">{{ stats.template_emails }}</span><span class="muted">emails that fell back to the template</span></div>
+    </div>
+    <h3>Runs with AI problems</h3>
+    {% if stats.ai_issues %}
+    <ul class="plain-list">
+      {% for i in stats.ai_issues %}
+      <li><a href="{{ url_for('view_run', run_id=i.id) }}"><strong>#{{ i.id }}</strong></a> <span class="muted">{{ i.created_at }}</span><br>{{ i.message }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="empty">None. The AI ran on every lead in every run.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Current scoring rules</h2>
+  <p class="muted">Set in logic.py. Base prices are illustrative placeholders, not real commercial prices.</p>
+  <div class="rules-grid">
+    <div>
+      <h3>Volume x price matrix (max 40)</h3>
+      <div class="table-scroll"><table class="matrix">
+        <thead><tr><th>Volume</th><th class="num">At or above base</th><th class="num">Below base</th></tr></thead>
+        <tbody>
+          {% for name, minimum, label in bands %}
+          <tr><td>{{ name }} <span class="muted">({{ label }})</span></td><td class="num">{{ matrix[name][0] }}</td><td class="num">{{ matrix[name][1] }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      <p class="muted">Base prices: {% for p, v in base_prices.items() %}{{ p }} ${{ '%.2f'|format(v) }}{{ ", " if not loop.last }}{% endfor %} per kg.</p>
+    </div>
+    <div>
+      <h3>Other parts</h3>
+      <div class="table-scroll"><table class="matrix">
+        <tbody>
+          <tr><td>Company fit (max 10)</td><td>{% for k, v in company_fit.items() %}{{ k }} {{ v }}{{ ", " if not loop.last }}{% endfor %}</td></tr>
+          <tr><td>Authority (max 15)</td><td>Decision-maker 15, influencer 9, other 3</td></tr>
+          <tr><td>Lead source</td><td>{% for k, v in source_points.items() %}{{ k }} {{ v }}{{ ", " if not loop.last }}{% endfor %}</td></tr>
+          <tr><td>AI signals</td><td>{% for k, v in signal_points.items() %}{{ k|replace('_', ' ') }} {{ '%+d'|format(v) }}{{ ", " if not loop.last }}{% endfor %} (intent capped at 35)</td></tr>
+          <tr><td>Segments</td><td>{% for name, minimum in segments %}{{ name }} {{ minimum }}+{{ ", " if not loop.last }}{% endfor %}</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if stats.runs %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  const runs = {{ stats.chart_runs|tojson }};
+  const actions = {{ stats.actions|tojson }};
+  const css = getComputedStyle(document.documentElement);
+  const ink = css.getPropertyValue("--muted").trim() || "#667085";
+  const grid = css.getPropertyValue("--line").trim() || "#e3e6eb";
+  const surface = "#ffffff";
+
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = ink;
+
+  const segColors = { Hot: "#b42318", Warm: "#e8a33d", Nurture: "#1f5fae", Low: "#98a2b3" };
+  const bar = (label, data) => ({
+    label, data, backgroundColor: segColors[label],
+    borderColor: surface, borderWidth: { top: 2 }, borderSkipped: false, borderRadius: 4,
+    maxBarThickness: 28,
+  });
+
+  new Chart(document.getElementById("mixChart"), {
+    type: "bar",
+    data: {
+      labels: runs.labels,
+      datasets: [bar("Hot", runs.hot), bar("Warm", runs.warm), bar("Nurture", runs.nurture), bar("Low", runs.low)],
+    },
+    options: {
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 12, boxHeight: 12 } } },
+      scales: {
+        x: { stacked: true, grid: { display: false }, title: { display: true, text: "Run" } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: grid }, title: { display: true, text: "Leads" } },
+      },
+    },
+  });
+
+  new Chart(document.getElementById("actionChart"), {
+    type: "bar",
+    data: {
+      labels: actions.map(a => a[0].replace(/\.$/, "")),
+      datasets: [{ label: "Leads", data: actions.map(a => a[1]), backgroundColor: "#7a4a24", borderRadius: 4, maxBarThickness: 22 }],
+    },
+    options: {
+      indexAxis: "y",
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grid } },
+        y: { grid: { display: false }, ticks: { callback: function (v) { const t = this.getLabelForValue(v); return t.length > 38 ? t.slice(0, 36) + "…" : t; } } },
+      },
+    },
+  });
+</script>
+{% endif %}
+{% endblock %}

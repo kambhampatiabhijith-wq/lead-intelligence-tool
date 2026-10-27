@@ -10,6 +10,10 @@
 
 <section class="card">
   {% if runs %}
+  <div class="card-head">
+    <h2>Saved runs <span class="count">{{ runs|length }}</span></h2>
+    <a class="btn btn-ghost" href="{{ url_for('export_csv') }}">Export all results (CSV)</a>
+  </div>
   <div class="table-scroll">
     <table>
       <thead>
@@ -24,6 +28,7 @@
           <th class="num">Rejected</th>
           <th class="num">Avg score</th>
           <th>AI</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -39,6 +44,11 @@
           <td class="num">{{ r.rejected_count }}</td>
           <td class="num">{{ '%d'|format(r.avg_score) if r.avg_score is not none else '-' }}</td>
           <td>{% if r.ai_used %}<span class="src src-ai">AI</span>{% else %}<span class="muted" title="{{ r.ai_message }}">Rules only</span>{% endif %}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete_run', run_id=r.id) }}" class="inline-form">
+              <button type="submit" class="link-btn link-danger" title="Delete this run and its results">Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>

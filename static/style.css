@@ -207,3 +207,35 @@ q { font-style: italic; }
 .seg-text-warm { color: var(--warm); font-weight: 700; }
 .seg-text-nurture { color: var(--nurture); font-weight: 700; }
 .seg-text-low { color: var(--low); font-weight: 700; }
+
+/* ---------- Stage 7: admin dashboard ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.kpi-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+.kpi-num { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.kpi-note { font-size: 13px; color: var(--muted); }
+.verdict { font-size: 16px; font-weight: 600; margin: 4px 0 12px; }
+.matrix td, .matrix th { padding: 8px; }
+.dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.chart-box { position: relative; height: 280px; }
+.plain-list { list-style: none; padding: 0; margin: 0; }
+.plain-list li { padding: 10px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.plain-list li:first-child { border-top: none; }
+.plain-list .muted { display: block; margin-top: 2px; }
+.health { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 4px; }
+.health > div { display: flex; flex-direction: column; gap: 2px; }
+.kpi-num-sm { font-size: 22px; font-weight: 700; }
+.rules-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; }
+.inline-form { margin: 0; }
+.link-danger { color: var(--error); }
+a.btn { text-decoration: none; display: inline-block; }
+
+@media (max-width: 800px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .dash-grid, .rules-grid, .health { grid-template-columns: 1fr; }
+}
+.dash-grid > *, .rules-grid > *, .grid > * { min-width: 0; }
+@media (max-width: 800px) {
+  .topbar-inner { height: auto; padding: 10px 16px; flex-wrap: wrap; gap: 6px; }
+  .topbar nav a { margin-left: 0; margin-right: 14px; }
+}

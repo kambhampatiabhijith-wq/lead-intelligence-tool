@@ -253,3 +253,111 @@ def set_outcome(result_id, outcome):
 def clear_outcome(result_id):
     with connect() as conn:
         conn.execute("DELETE FROM outcomes WHERE result_id = ?", (result_id,))
+
+
+# ---------- Admin: dashboard numbers, deleting runs, export ----------
+
+SEGMENTS = ["Hot", "Warm", "Nurture", "Low"]
+POSITIVE = ("Meeting", "Won")
+
+
+def dashboard_stats():
+    """Everything the admin dashboard shows, computed from the database."""
+    with connect() as conn:
+        runs = conn.execute("SELECT * FROM runs ORDER BY id").fetchall()
+        results = conn.execute(
+            """SELECT r.id, r.run_id, r.lead_id, r.company, r.contact_name, r.segment, r.score,
+                      r.next_action, r.email_source, r.ai_dropped, o.outcome
+               FROM results r LEFT JOIN outcomes o ON o.result_id = r.id""").fetchall()
+        mix = conn.execute(
+            """SELECT run_id, segment, COUNT(*) AS n FROM results GROUP BY run_id, segment""").fetchall()
+
+    stats = {
+        "runs": len(runs),
+        "leads_scored": len(results),
+        "rejected": sum(r["rejected_count"] for r in runs),
+        "avg_score": round(sum(r["score"] for r in results) / len(results)) if results else None,
+        "ai_runs": sum(1 for r in runs if r["ai_used"]),
+        "template_emails": sum(1 for r in results if r["email_source"] == "Template"),
+        "dropped_claims": sum(len(json.loads(r["ai_dropped"] or "[]")) for r in results),
+        "outcomes_recorded": sum(1 for r in results if r["outcome"]),
+    }
+    stats["ai_rate"] = round(100 * stats["ai_runs"] / stats["runs"]) if runs else None
+
+    # Segment totals and conversion: of the leads with an outcome, how many reached a meeting or a win?
+    segments = []
+    for seg in SEGMENTS:
+        rows = [r for r in results if r["segment"] == seg]
+        recorded = [r for r in rows if r["outcome"]]
+        positive = [r for r in recorded if r["outcome"] in POSITIVE]
+        segments.append({
+            "segment": seg,
+            "leads": len(rows),
+            "recorded": len(recorded),
+            "counts": {o: sum(1 for r in recorded if r["outcome"] == o) for o in OUTCOMES},
+            "positive": len(positive),
+            "rate": round(100 * len(positive) / len(recorded)) if recorded else None,
+        })
+    stats["segments"] = segments
+    hot, warm = segments[0], segments[1]
+    if hot["rate"] is not None and warm["rate"] is not None:
+        if hot["rate"] > warm["rate"]:
+            stats["verdict"] = f"Yes. {hot['rate']}% of Hot leads reached a meeting or win, against {warm['rate']}% of Warm leads."
+        elif hot["rate"] == warm["rate"]:
+            stats["verdict"] = f"Not yet. Hot and Warm leads convert at the same rate ({hot['rate']}%)."
+        else:
+            stats["verdict"] = (f"No. Warm leads are converting better ({warm['rate']}% against {hot['rate']}%). "
+                                "Review the scoring weights.")
+    else:
+        stats["verdict"] = "Not enough data yet. Record outcomes for some Hot and Warm leads on the Results page."
+
+    # Segment mix for the last 12 runs (chart)
+    recent = runs[-12:]
+    by_run = {}
+    for m in mix:
+        by_run.setdefault(m["run_id"], {})[m["segment"]] = m["n"]
+    stats["chart_runs"] = {
+        "labels": [f"#{r['id']}" for r in recent],
+        **{seg.lower(): [by_run.get(r["id"], {}).get(seg, 0) for r in recent] for seg in SEGMENTS},
+    }
+
+    # Next actions across all scored leads
+    actions = {}
+    for r in results:
+        actions[r["next_action"]] = actions.get(r["next_action"], 0) + 1
+    stats["actions"] = sorted(actions.items(), key=lambda kv: -kv[1])
+
+    # Hot and Warm leads from the latest run that have no outcome yet
+    latest = runs[-1]["id"] if runs else None
+    stats["latest_run"] = latest
+    stats["follow_ups"] = [dict(r) for r in results
+                           if r["run_id"] == latest and r["segment"] in ("Hot", "Warm") and not r["outcome"]]
+
+    # Runs where the AI did not run, or skipped some leads
+    stats["ai_issues"] = [{"id": r["id"], "created_at": local_time(r["created_at"]), "message": r["ai_message"]}
+                          for r in reversed(runs)
+                          if not r["ai_used"] or "Not checked" in (r["ai_message"] or "")][:8]
+    return stats
+
+
+def delete_run(run_id):
+    """Remove a run and everything saved with it."""
+    with connect() as conn:
+        conn.execute("DELETE FROM outcomes WHERE result_id IN (SELECT id FROM results WHERE run_id = ?)", (run_id,))
+        conn.execute("DELETE FROM results WHERE run_id = ?", (run_id,))
+        conn.execute("DELETE FROM rejected WHERE run_id = ?", (run_id,))
+        cur = conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
+    return cur.rowcount > 0
+
+
+def export_rows():
+    """Every scored lead with its run and outcome, for the CSV export."""
+    with connect() as conn:
+        rows = conn.execute(
+            """SELECT r.run_id, ru.created_at, r.lead_id, r.contact_name, r.role, r.company, r.company_type,
+                      r.product, r.annual_volume_tonnes, r.indicative_price_usd_kg, r.lead_source,
+                      r.score, r.segment, r.next_action, r.email_source, o.outcome
+               FROM results r JOIN runs ru ON ru.id = r.run_id
+               LEFT JOIN outcomes o ON o.result_id = r.id
+               ORDER BY r.run_id DESC, r.id""").fetchall()
+    return [dict(r) for r in rows]

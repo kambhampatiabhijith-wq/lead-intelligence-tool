@@ -5,14 +5,14 @@ Flow for each scoring run (POST /api/score):
   ai.py          -> quoted buying signals + outreach email draft (Groq)
   logic.py       -> score, segment, next action, email checks
   db.py          -> run, results and rejected rows saved in SQLite
-The pages read everything back from the database.
+The pages read everything back from the database; /dashboard is the admin view.
 """
 
 import csv
 import io
 import os
 
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, abort, flash, jsonify, redirect, render_template, request, url_for
 
 import ai
 import db
@@ -171,6 +171,41 @@ def record_outcome(result_id):
     else:
         flash("Pick one of the outcome buttons.", "error")
     return redirect(url_for("view_run", run_id=run_id) + f"#result-{result_id}")
+
+
+# ---------- Admin ----------
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template(
+        "dashboard.html", stats=db.dashboard_stats(), outcomes=db.OUTCOMES,
+        base_prices=logic.BASE_PRICES, matrix=logic.MATRIX, bands=logic.VOLUME_BANDS,
+        company_fit=logic.COMPANY_FIT, source_points=logic.SOURCE_POINTS,
+        signal_points=logic.SIGNAL_POINTS, segments=logic.SEGMENTS,
+    )
+
+
+@app.post("/runs/<int:run_id>/delete")
+def delete_run(run_id):
+    if db.delete_run(run_id):
+        flash(f"Deleted run #{run_id} and its results.", "ok")
+    else:
+        flash(f"Run #{run_id} was not found.", "error")
+    return redirect(url_for("history"))
+
+
+@app.get("/export.csv")
+def export_csv():
+    rows = db.export_rows()
+    out = io.StringIO()
+    columns = ["run_id", "created_at", "lead_id", "contact_name", "role", "company", "company_type",
+               "product", "annual_volume_tonnes", "indicative_price_usd_kg", "lead_source",
+               "score", "segment", "next_action", "email_source", "outcome"]
+    writer = csv.DictWriter(out, fieldnames=columns)
+    writer.writeheader()
+    writer.writerows(rows)
+    return Response(out.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=scored_leads.csv"})
 
 
 if __name__ == "__main__":
