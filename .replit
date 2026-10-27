@@ -5,6 +5,9 @@ run = ".pythonlibs/bin/python main.py"
 channel = "stable-25_05"
 
 [deployment]
+# Replit's automatic "pip install" is blocked on this Python, so the build
+# creates the package folder with uv and installs Flask into it.
+build = ["sh", "-c", "(test -x .pythonlibs/bin/python || uv venv .pythonlibs) && uv pip install --python .pythonlibs/bin/python -r requirements-app.txt"]
 run = [".pythonlibs/bin/python", "main.py"]
 deploymentTarget = "autoscale"
 

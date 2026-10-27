@@ -47,7 +47,7 @@ Base prices are **illustrative placeholders** (spray-dried $8.00, agglomerated $
 ## Running it
 
 1. Add a Groq API key in Replit **Secrets** as `GROQ_API_KEY` (or an OpenAI key as `OPENAI_API_KEY`).
-2. Install Flask (`pip install -r requirements.txt`) and run `python main.py`. The app listens on port 8000.
+2. Install Flask (`uv pip install --python .pythonlibs/bin/python -r requirements-app.txt`) and run `.pythonlibs/bin/python main.py`. The app listens on port 8000.
 3. Upload `sample_leads.csv` and click **Score leads**.
 
 Optional settings: `GROQ_MODEL`, `DB_PATH` (default `leads.db`), `SESSION_SECRET`.
